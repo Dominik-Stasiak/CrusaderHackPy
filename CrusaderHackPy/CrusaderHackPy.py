@@ -2,6 +2,7 @@ from tkinter.tix import INTEGER, MAX
 from ReadWriteMemory import ReadWriteMemory
 import keyboard
 import os
+import tkinter as tk
 
 rwm = ReadWriteMemory()
 
@@ -16,7 +17,8 @@ class Game:
         self.id = self.name
         self.goldAddress = self.gold
         self.goldPointer = process.get_pointer(self.goldAddress)
-        self.goldValue = process.read(self.goldPointer)
+        t = process.read(self.goldPointer)
+        self.goldValue = 0 if t <= 0 or t > 4e9 else t
 
     def addGold(self):
         process.write(self.goldPointer, self.goldValue + 500)
@@ -28,6 +30,9 @@ class Game:
         else:
             print(self.id, " <=> ", self.goldValue)
 
+    def refresh(self):
+        t = process.read(self.goldPointer)
+        self.goldValue = 0 if t <= 0 or t > 4e9 else t
 
 class Player(Game):
     gold = 0x0115FCF8
@@ -86,8 +91,6 @@ class Green(Game):
     def __init__(self):
         super().__init__()
 
-
-
 p = Player()
 b = Blue()
 g = Gray()
@@ -99,25 +102,63 @@ gr = Green()
 
 players = [p, b, g, pu, o, l, y, gr]
 
-def showPlayerInfo():
+def refreshPlayersInfo():
     for i in players:
-        i.show()
-
-while 1:
-    for i in players:
-        i.__init__()
+        i.refresh()
+        label_gold = root.grid_slaves(row=players.index(i), column=1)[0]
+        label_gold.config(text="Gold: " + str(i.goldValue))
+    root.update_idletasks()
+    root.after(100, refreshPlayersInfo)
     
-    try:
-        if keyboard.read_key() == 'q':
-            break
-        elif keyboard.read_key() == '[':
-            p.addGold()
-        elif keyboard.read_key() == ']':
-            os.system('cls')
-            showPlayerInfo()
-        
-    except:
-        break
+def toggle_color():
+    if button["bg"] == "red":
+        button.configure(bg="green")
+    else:
+        button.configure(bg="red")
+
+def on_key(event):
+    if event.char == 'i':
+        print('i')
+    elif event.char == 'o':
+        p.addGold()
+        print(p.name, "gold added")
+    elif event.char == 'p':
+        print('p')
+
+root = tk.Tk()
+root.title("Player Info")
+
+for i, player in enumerate(players):
+    label_name = tk.Label(root, text="Name: " + player.name)
+    label_gold = tk.Label(root, text="Gold: " + str(player.goldValue))
+    canvas = tk.Canvas(root, width=60, height=60)
+    c = "white" if player.name == "Player" else player.name
+    rectangle = canvas.create_rectangle(0, 0, 60, 60, fill=c)
+    x1, y1, x2, y2 = canvas.coords(rectangle)
+    center_x = (x1 + x2) / 2
+    center_y = (y1 + y2) / 2
+    canvas.create_text(center_x, center_y, text=player.name, fill="black")
+
+    label_name.grid(row=i, column=0, padx=5, pady=5, sticky="w")
+    label_gold.grid(row=i, column=1, padx=5, pady=5, sticky="w")
+    canvas.grid(row=i, column=2, padx=5, pady=5)
+    
+def toggle_color():
+    if button["bg"] == "red":
+        button.configure(bg="green")
+    else:
+        button.configure(bg="red")
+
+button = tk.Button(root, text="On/Off", bg="red", command=lambda: toggle_color())
+button.grid(row=i+1, column=2, padx=5, pady=5)
+
+refreshPlayersInfo()
+
+root.bind('<Key>', on_key)
+
+root.focus_set()
+ 
+root.mainloop()
 
 
     
